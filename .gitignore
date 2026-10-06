@@ -1,0 +1,19 @@
+# Python virtual environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# API keys and environment variables
+.env
+
+# Application log files
+*.log
+
+# macOS files
+.DS_Store
+
+# VS Code personal settings
+.vscode/

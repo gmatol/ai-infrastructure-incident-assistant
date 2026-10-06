@@ -1,0 +1,18 @@
+{
+    "generated_at": "2026-09-10T15:49:56+00:00",
+    "incident": "Users receive HTTP 503 errors from an application running in Kubernetes. The deployment has three desired replicas, but only one pod is Ready. The other two pods are failing readiness probes.",
+    "analysis": {
+        "severity": "High",
+        "summary": "Users are receiving HTTP 503 errors, and only one of three desired application replicas is Ready. The two pods failing readiness probes reduce available serving capacity and may contribute to the errors.",
+        "likely_cause": "Readiness failures are preventing two pods from receiving normal Service traffic. The underlying cause is not established; possibilities include application health problems, unavailable dependencies, resource pressure, or incorrect probe configuration. The evidence does not establish whether the 503 responses originate from the application, ingress, or another proxy.",
+        "troubleshooting_steps": [
+            "Inspect pod status and events using kubectl get pods -n <namespace> -o wide and kubectl describe pod <pod> -n <namespace>. Note readiness failure messages, restarts, and scheduling or resource warnings.",
+            "Review logs for the failing pods and compare them with the Ready pod. If containers have restarted, inspect previous container logs as well.",
+            "Inspect the Deployment readiness probe configuration, including path, port, protocol, timeout, and thresholds. Compare probe failures with application startup and dependency health.",
+            "Check the Service selectors, target ports, and EndpointSlices to confirm that the Ready pod is an eligible backend and that traffic can reach its application port.",
+            "Inspect ingress or proxy logs and backend health, if applicable, to identify where the 503 responses originate and whether they correlate with missing endpoints, connection failures, or overload.",
+            "Check pod and node resource usage, if metrics are available, and compare pod placement, configuration, image versions, and recent changes between healthy and failing replicas."
+        ],
+        "recommended_action": "First identify the readiness failure and the source of the 503 responses while preserving the remaining Ready pod. Apply a targeted fix based on the findings, such as correcting a confirmed probe mismatch or restoring an unhealthy dependency. Avoid disabling readiness checks or restarting all replicas. Validate recovery by confirming all three replicas are Ready and user requests succeed."
+    }
+}
