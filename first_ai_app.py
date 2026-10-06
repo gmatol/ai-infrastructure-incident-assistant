@@ -1,6 +1,5 @@
 from openai import OpenAI, OpenAIError
 
-
 client = OpenAI()
 
 instructions = """

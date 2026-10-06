@@ -4,10 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from incident_history import (
-    find_incidents_by_severity,
-    get_severity_filter
-)
+from incident_history import find_incidents_by_severity, get_severity_filter
 
 
 class TestIncidentHistory(unittest.TestCase):
