@@ -1,0 +1,15 @@
+{
+  "report_filename": "incident_20261007_210124_857935.json",
+  "reviewer": "Guot Deng Anyak",
+  "scores": {
+    "facts_are_accurate": 2,
+    "uncertainty_is_clear": 2,
+    "investigation_is_relevant": 2,
+    "actions_are_cautious": 2,
+    "next_evidence_is_clear": 2
+  },
+  "total_score": 10,
+  "maximum_score": 10,
+  "improvement_needed": "Confirm business impact before finalizing Low severity; one affected user could perform a critical function.",
+  "cause_verified": false
+}

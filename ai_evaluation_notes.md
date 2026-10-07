@@ -24,3 +24,19 @@ affected users, and outage duration were not supplied.
 Review limitation:
 This score evaluates the written guidance. No commands were
 executed, and the actual cause or recovery was not verified.
+
+## Evaluation 2 — Windows file-share access
+
+Report filename:
+
+- Uses the supplied facts accurately: /2
+- Separates likely causes from confirmed causes: /2
+- Gives relevant investigation steps: /2
+- Avoids disruptive actions without justification: /2
+- Explains what evidence to collect next: /2
+
+Total: /10
+
+Is the severity justified by the supplied impact?
+Unsupported claims:
+What needs improvement:
