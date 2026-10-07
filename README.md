@@ -144,6 +144,8 @@ WARNING | Could not read incident_corrupted.json.
 - Temporary test data
 - Test discovery
 - Secure dependency and environment management
+- GitHub Actions continuous integration
+- Ruff static code analysis
 
 ## Interview Summary
 
