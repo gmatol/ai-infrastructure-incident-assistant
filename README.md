@@ -2,151 +2,169 @@
 
 [![Python Tests](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml/badge.svg)](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml)
 
-A Python-based infrastructure troubleshooting project that analyzes incidents, produces structured results, stores reports as JSON, searches incident history, and handles damaged report files safely.
+A Python command-line portfolio project for infrastructure incident investigation. It generates structured AI guidance, saves JSON incident reports, filters report history, and records human evaluations of response quality.
 
-## Project Purpose
+Built for learning workflows relevant to System Administrators, Cloud Engineers, DevOps Engineers, and SREs.
 
-This project demonstrates how AI and Python can support System Administrators, Cloud Engineers, DevOps Engineers, and SRE teams during incident investigation.
+## Capabilities
 
-Example scenarios include:
+- Analyze fictional Linux, Windows, AWS, Kubernetes, and networking incidents.
+- Validate AI response structure with Pydantic.
+- Save timestamped incident reports as JSON.
+- Filter history by Low, Medium, High, Critical, or All.
+- Log history operations and skip unreadable or corrupted JSON reports.
+- Record human evaluation scores linked to incident report filenames.
+- Reject invalid scores and preserve existing evaluation files.
+- Run isolated unit tests, Ruff checks, and GitHub Actions.
 
-- Kubernetes readiness failures and HTTP 503 errors
-- Linux web-server port conflicts
-- Windows file-share permission problems
-- AWS security-group connectivity issues
+## Setup on macOS
 
-## Features
-
-- Command-line incident input
-- AI-generated incident analysis
-- Structured output using Pydantic
-- JSON incident-report storage
-- Severity filtering
-- Input validation
-- Timestamped operational logging
-- Safe handling of corrupted JSON files
-- Automated unit tests
-- Automatic test discovery
-
-## Main Files
-
-| File | Purpose |
-|---|---|
-| `first_ai_app.py` | Basic AI incident-analysis application |
-| `structured_incident_app.py` | Produces structured incident results |
-| `incident_history.py` | Searches and displays saved reports |
-| `test_incident_history.py` | Tests filtering and input validation |
-| `test_corrupted_report.py` | Tests corrupted JSON handling |
-| `run_tests.py` | Discovers and runs all automated tests |
-| `requirements.txt` | Lists external Python dependencies |
-| `.gitignore` | Excludes secrets and generated files |
-
-## Requirements
-
-- Python 3.9 or newer
-- OpenAI API key for the AI-analysis programs
-
-## Installation
-
-Create and activate a virtual environment:
+Clone the repository and run commands from its root:
 
 ```bash
+git clone https://github.com/gmatol/ai-infrastructure-incident-assistant.git
+cd ai-infrastructure-incident-assistant
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-Install the dependencies:
-
-```bash
 python -m pip install -r requirements.txt
+python -m pip install ruff
 ```
 
-Set the OpenAI API key:
+The project has been exercised locally on Python 3.9. GitHub Actions uses Python 3.11. Dependency and model availability may require a newer Python version or an accessible model.
+
+For AI analysis, configure your own OpenAI API key. API usage may incur charges. The analysis script currently specifies its model in `structured_incident_app.py`; use a model available to your account that supports structured responses.
+
+Create a local `.env` in VS Code with this shell assignment, replacing the placeholder privately:
 
 ```bash
-export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_KEY="your_openai_api_key_here"
 ```
 
-Never save a real API key inside the Python source code.
+Load it in each new terminal session:
 
-## Run the Incident History Application
+```bash
+source .env
+python -c 'import os; print("API key configured:", bool(os.getenv("OPENAI_API_KEY")))'
+git check-ignore -v .env
+```
+
+The application does not automatically load `.env`. Never commit real keys. `.env.example` contains a placeholder only. Do not place credentials or confidential customer information in incident descriptions.
+
+## Generate an incident report
+
+```bash
+python structured_incident_app.py
+```
+
+Wait for the incident prompt, then enter one line. Visual wrapping is fine; actual newlines end the input.
+
+Example fictional incident:
+
+```text
+One payroll administrator receives Access Denied on a Windows Server payroll share. Payroll for 200 employees is due in 30 minutes and no approved workaround exists. Group membership, share permissions, NTFS permissions, and SMB connections have not been checked.
+```
+
+The response includes severity, summary, likely cause, troubleshooting steps, and recommended action. A report is saved to `incident_reports/incident_<timestamp>.json`. Responses vary; no particular diagnosis or score is guaranteed.
+
+## Search incident history
 
 ```bash
 python incident_history.py
 ```
 
-Example selection:
+Enter `High`, another allowed severity, or `All`. The program displays matching reports and their count. Run from the repository root because incident generation and history use relative report paths.
 
-```text
-Enter severity (Low, Medium, High, Critical, or All):
-> All
+## Save a human evaluation
+
+Review the AI answer before scoring it:
+
+```bash
+python save_evaluation.py
 ```
 
-Example output:
+Enter the report filename only, such as `incident_20261007_230347_221575.json`, without `incident_reports/`. The corresponding report must exist locally.
 
-```text
-INCIDENT HISTORY — All
---------------------------------------------------
+Enter integer scores of 0, 1, or 2 for the six criteria, followed by an improvement note. The script writes `evaluations/evaluation_<report_filename>` and refuses to overwrite an existing evaluation. It makes no AI API call.
 
-Report 1
-Severity: High
-Summary: Users are receiving HTTP 503 errors because
-two application pods are failing readiness checks.
+The reviewer name is currently set to Guot Deng Anyak in the script; other reviewers should change it for their own reviews.
 
-Total matching reports: 1
-```
+### Scoring guide
 
-## Run the Automated Tests
+| Criterion | 0 | 1 | 2 |
+|---|---|---|---|
+| Facts are accurate | Invents or contradicts key facts | Partly accurate but misses important context | Accurately uses supplied facts |
+| Uncertainty is clear | Presents an unverified cause as certain | Some uncertainty, with overconfident wording | Clearly separates hypotheses from confirmed evidence |
+| Investigation is relevant | Irrelevant or misleading steps | Useful but incomplete investigation | Relevant steps tailored to the scenario |
+| Actions are cautious | Unjustified disruptive or broad-access actions | Some safeguards are missing | Evidence-first, targeted actions with appropriate safeguards |
+| Next evidence is clear | No useful evidence request | Vague or partial evidence requests | Identifies specific evidence needed to narrow the cause |
+| Severity is justified | Ignores or contradicts business impact | Plausible rating but misses impact questions | Uses supplied impact or clearly marks the rating provisional and requests missing evidence |
+
+Five-criterion historical reviews have a maximum of 10. New six-criterion reviews have a maximum of 12. Preserve the original score and criterion set. A 10/10 review and a 12/12 review assess different rubrics and do not establish equivalent quality.
+
+Evaluations are subjective human reviews, not verified accuracy measurements. The small set of fictional examples does not establish overall model reliability. `cause_verified` remains false in records generated by this script.
+
+## Tests and code quality
 
 ```bash
 python run_tests.py
+ruff check .
 ```
 
-Expected result:
+The completed local suite has 18 tests:
 
-```text
-Ran 7 tests
-OK
-```
+- Incident filtering and severity input validation.
+- Corrupted JSON handling and warning logging.
+- Valid scores and rejection of text, booleans, empty scores, and out-of-range scores.
+- Evaluation persistence, overwrite protection, and missing-report rejection.
+- Six unique criteria and a full-score total of 12.
 
-The tests verify:
+Tests use temporary data and mocked input. They do not require an API key or paid model calls. Passing tests verifies covered application behavior, not the correctness of generated diagnoses or complete coverage of the interactive CLI.
 
-- Severity filtering
-- Input normalization
-- Invalid-input rejection
-- Corrupted JSON handling
-- Warning-log generation
+GitHub Actions runs Ruff and the test suite on pull requests and pushes to main. Merge only after required checks pass.
 
-## Logging
+## Main files
 
-Application events are written to:
+| File | Purpose |
+|---|---|
+| `first_ai_app.py` | Basic AI analysis CLI |
+| `structured_incident_app.py` | Structured analysis and incident JSON storage |
+| `incident_history.py` | Severity filtering, display, and logging |
+| `save_evaluation.py` | Human evaluation entry, validation, and safe saving |
+| `ai_evaluation_notes.md` | Written evaluation notes |
+| `test_incident_history.py` | History and input tests |
+| `test_corrupted_report.py` | Corrupted-report test |
+| `test_evaluation.py` | Score validation tests |
+| `test_evaluation_saving.py` | Safe-saving tests |
+| `test_evaluation_criteria.py` | Shared criterion tests |
+| `run_tests.py` | Automatic test discovery |
+| `requirements.txt` | Application dependencies |
+| `.github/workflows/python-tests.yml` | CI workflow |
 
-```text
-incident_history.log
-```
+## Safety and limitations
 
-Example:
+- The assistant suggests guidance; it does not execute commands or connect to infrastructure.
+- Pydantic validates structure and field types, not factual correctness.
+- Administrators must verify diagnoses and recommendations against actual evidence and approved procedures.
+- Incident descriptions are sent to the configured AI API. Company use requires approval for that data flow.
+- Reports and evaluations are local JSON files, without application authentication, encryption, or retention controls.
+- This is a portfolio prototype, not a production incident-management or autonomous-remediation system.
+- Generated incident reports and logs are ignored by Git. Only deliberately reviewed fictional evaluation examples should be shared.
 
-```text
-INFO | Severity filter All returned 1 report(s).
-WARNING | Could not read incident_corrupted.json.
-```
+## Three-minute portfolio demonstration
 
-## Skills Demonstrated
+1. Introduce the infrastructure investigation problem.
+2. Generate one structured response using a fictional one-line incident.
+3. Show its saved report and retrieve it with the history filter.
+4. Explain an evaluation, including its limitations and improvement note.
+5. Show the test and Ruff results. Keep keys and private data off-screen.
 
-- Python functions and type hints
-- JSON file processing
-- Pydantic structured data
-- OpenAI API integration
-- Exception handling
-- Python logging
-- Unit testing
-- Temporary test data
-- Test discovery
-- Secure dependency and environment management
-- GitHub Actions continuous integration
-- Ruff static code analysis
+## Interview summary
 
-## Interview Summary
+“I built a Python infrastructure incident assistant that generates structured troubleshooting guidance, saves JSON reports, and filters history. I added human evaluation records, validation, overwrite protection, isolated tests, and GitHub Actions. The application supports investigation; an administrator verifies evidence and performs approved actions.”
 
-> I built a Python-based infrastructure incident assistant that uses AI and structured output to analyze operational problems. It stores reports as JSON, filters incident history by severity, logs operational events, and includes automated tests for validation and corrupted-data handling.
+## Release milestones
+
+- `v1.0.0`: initial incident-assistant portfolio milestone.
+- Planned `v1.1.0`: human evaluations, safe reusable saving, six shared criteria, 18-test suite, and updated documentation.
+
+The next learning project is a separate Infrastructure Runbook Assistant focused on retrieving evidence from approved documents.
