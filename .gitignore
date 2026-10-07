@@ -17,3 +17,4 @@ __pycache__/
 
 # VS Code personal settings
 .vscode/
+incident_reports/incident_*.json
