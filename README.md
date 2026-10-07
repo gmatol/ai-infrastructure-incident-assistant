@@ -1,5 +1,7 @@
 # AI Infrastructure Incident Assistant
 
+[![Python Tests](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml/badge.svg)](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml)
+
 A Python-based infrastructure troubleshooting project that analyzes incidents, produces structured results, stores reports as JSON, searches incident history, and handles damaged report files safely.
 
 ## Project Purpose
