@@ -1,0 +1,16 @@
+{
+  "report_filename": "incident_20261007_230347_221575.json",
+  "reviewer": "Guot Deng Anyak",
+  "scores": {
+    "facts_are_accurate": 2,
+    "uncertainty_is_clear": 2,
+    "investigation_is_relevant": 2,
+    "actions_are_cautious": 2,
+    "next_evidence_is_clear": 2,
+    "severity_is_justified": 2
+  },
+  "total_score": 12,
+  "maximum_score": 12,
+  "improvement_needed": "Map the High rating to the organization's severity policy and confirm the actual payroll impact.",
+  "cause_verified": false
+}

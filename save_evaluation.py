@@ -3,6 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+EVALUATION_CRITERIA = (
+    "facts_are_accurate",
+    "uncertainty_is_clear",
+    "investigation_is_relevant",
+    "actions_are_cautious",
+    "next_evidence_is_clear",
+    "severity_is_justified",
+)
 
 def validate_scores(scores: dict) -> None:
     if not scores:
@@ -65,17 +73,9 @@ def save_evaluation(
 def main() -> None:
     report_filename = input("Enter incident report filename: ").strip()
 
-    criteria = [
-        "facts_are_accurate",
-        "uncertainty_is_clear",
-        "investigation_is_relevant",
-        "actions_are_cautious",
-        "next_evidence_is_clear",
-    ]
-
     scores = {}
 
-    for criterion in criteria:
+    for criterion in EVALUATION_CRITERIA:
         scores[criterion] = int(
             input(f"{criterion} (0, 1, or 2): ").strip()
         )
