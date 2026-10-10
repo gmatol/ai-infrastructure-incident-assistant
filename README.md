@@ -82,11 +82,13 @@ Review the AI answer before scoring it:
 python save_evaluation.py
 ```
 
-Enter the report filename only, such as `incident_20261007_230347_221575.json`, without `incident_reports/`. The corresponding report must exist locally.
+Enter your reviewer name first, then enter the report filename only, such as `incident_20261007_230347_221575.json`, without `incident_reports/`. The corresponding report must exist locally.
 
 Enter integer scores of 0, 1, or 2 for the six criteria, followed by an improvement note. The script writes `evaluations/evaluation_<report_filename>` and refuses to overwrite an existing evaluation. It makes no AI API call.
 
-The reviewer name is currently set to Guot Deng Anyak in the script; other reviewers should change it for their own reviews.
+The name is stored in the evaluation JSON's `reviewer` field. Leading and trailing whitespace is removed; empty or whitespace-only names are rejected before scores are collected. Names may contain Unicode characters, spaces, and punctuation. Existing evaluation records are left unchanged.
+
+Python callers can pass `reviewer="Alex Reviewer"` to `save_evaluation()`. The name must be non-empty text; invalid input raises `ValueError` before any evaluation directory or file is created. For compatibility, calls that omit `reviewer` retain the historical default, `Guot Deng Anyak`. New callers should supply their own name explicitly. The existing fourth positional argument, `project_folder`, remains supported.
 
 ### Scoring guide
 
@@ -110,12 +112,13 @@ python run_tests.py
 ruff check .
 ```
 
-The completed local suite has 18 tests:
+The suite has 24 tests:
 
 - Incident filtering and severity input validation.
 - Corrupted JSON handling and warning logging.
 - Valid scores and rejection of text, booleans, empty scores, and out-of-range scores.
 - Evaluation persistence, overwrite protection, and missing-report rejection.
+- Reviewer attribution and trimming, blank/non-text rejection, existing-record preservation, and CLI name handling.
 - Six unique criteria and a full-score total of 12.
 
 Tests use temporary data and mocked input. They do not require an API key or paid model calls. Passing tests verifies covered application behavior, not the correctness of generated diagnoses or complete coverage of the interactive CLI.
