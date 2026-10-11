@@ -27,10 +27,10 @@ cd ai-infrastructure-incident-assistant
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m pip install ruff
+python -m pip install ruff==0.17.0
 ```
 
-The project has been exercised locally on Python 3.9. GitHub Actions uses Python 3.11. Dependency and model availability may require a newer Python version or an accessible model.
+The project has been exercised locally on Python 3.9. GitHub Actions runs the automated suite on Python 3.9 and 3.11. Ruff is pinned to 0.17.0 locally and in CI, and `ruff.toml` targets Python 3.9 so lint suggestions preserve compatibility (including `timezone.utc`). Dependency and model availability may require a newer Python version or an accessible model. The unit suite does not exercise live AI API calls.
 
 For AI analysis, configure your own OpenAI API key. API usage may incur charges. The analysis script currently specifies its model in `structured_incident_app.py`; use a model available to your account that supports structured responses.
 
