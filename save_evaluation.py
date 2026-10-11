@@ -24,12 +24,22 @@ def validate_scores(scores: dict) -> None:
             )
 
 
+def validate_reviewer(reviewer: str) -> str:
+    """Return a trimmed reviewer name, rejecting missing or non-text input."""
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("Reviewer name must be non-empty text.")
+    return reviewer.strip()
+
+
 def save_evaluation(
     report_filename: str,
     scores: dict,
     improvement_needed: str,
-    project_folder: Path | None = None
+    project_folder: Path | None = None,
+    *,
+    reviewer: str = "Guot Deng Anyak",
 ) -> Path:
+    reviewer = validate_reviewer(reviewer)
     validate_scores(scores)
 
     if project_folder is None:
@@ -49,7 +59,7 @@ def save_evaluation(
 
     evaluation = {
         "report_filename": report_filename,
-        "reviewer": "Guot Deng Anyak",
+        "reviewer": reviewer,
         "scores": scores,
         "total_score": sum(scores.values()),
         "maximum_score": len(scores) * 2,
@@ -71,6 +81,7 @@ def save_evaluation(
 
 
 def main() -> None:
+    reviewer = validate_reviewer(input("Enter reviewer name: "))
     report_filename = input("Enter incident report filename: ").strip()
 
     scores = {}
@@ -85,7 +96,8 @@ def main() -> None:
     saved_path = save_evaluation(
         report_filename,
         scores,
-        improvement_needed
+        improvement_needed,
+        reviewer=reviewer,
     )
 
     print("Evaluation saved to:", saved_path)
