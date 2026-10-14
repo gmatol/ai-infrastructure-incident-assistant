@@ -78,7 +78,7 @@ class TestEvaluationSaving(unittest.TestCase):
         )
 
     def test_missing_report_is_rejected(self) -> None:
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, "Report not found"):
             save_evaluation(
                 "incident_missing.json",
                 self.scores,
