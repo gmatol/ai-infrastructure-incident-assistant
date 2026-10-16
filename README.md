@@ -32,7 +32,7 @@ python -m pip install ruff==0.17.0
 
 The project has been exercised locally on Python 3.9. GitHub Actions runs the automated suite on Python 3.9 and 3.11. Ruff is pinned to 0.17.0 locally and in CI, and `ruff.toml` targets Python 3.9 so lint suggestions preserve compatibility (including `timezone.utc`). Dependency and model availability may require a newer Python version or an accessible model. The unit suite does not exercise live AI API calls.
 
-For AI analysis, configure your own OpenAI API key. API usage may incur charges. The analysis script currently specifies its model in `structured_incident_app.py`; use a model available to your account that supports structured responses.
+For AI analysis, configure your own OpenAI API key. API usage may incur charges. Set `OPENAI_MODEL` to a model available to your account that supports structured responses; the default remains `gpt-6-astra`.
 
 Create a local `.env` in VS Code with this shell assignment, replacing the placeholder privately:
 
@@ -171,3 +171,74 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 - Planned `v1.1.0`: human evaluations, safe reusable saving, six shared criteria, 18-test suite, and updated documentation.
 
 The next learning project is a separate Infrastructure Runbook Assistant focused on retrieving evidence from approved documents.
+
+## Analyze an incident through the local API
+
+The API and CLI share `analyze_incident()` and the same `IncidentAnalysis`
+Pydantic schema in `structured_incident_app.py`. Importing either module does not
+prompt for input, construct an AI client, or send a request. `main()` keeps the
+interactive CLI and calls `save_report()` with the existing report JSON format
+and UTC filename pattern. Report files are opened exclusively to avoid overwrites.
+
+From your activated virtual environment in the repository root:
+
+```bash
+source .env
+# Optional: choose a model available to your account with structured output support.
+export OPENAI_MODEL="gpt-6-astra"
+python -m uvicorn incident_api:app --host 127.0.0.1 --port 8000
+```
+
+Open http://127.0.0.1:8000/docs, choose POST `/analyze`, and try this fictional input:
+
+```json
+{"description": "Kubernetes returns HTTP 503 with only 1/3 pods Ready after a deployment."}
+```
+
+A successful response has `severity` (Low, Medium, High, or Critical), `summary`,
+`likely_cause`, `troubleshooting_steps` (a list of strings), and
+`recommended_action`. Pydantic validates the provider output and FastAPI declares
+that schema as the response contract. The API does not save reports; continue
+using `python structured_incident_app.py` to generate saved CLI reports.
+Existing GET `/health` and POST `/incidents` remain available.
+
+Descriptions must be strings with 10–4000 characters after surrounding whitespace
+is removed. Missing, blank, short, oversized, or incorrectly typed descriptions
+and malformed JSON receive HTTP 422 without calling AI. Missing credentials return
+503; provider rate limits or connection errors return 503; timeouts return 504;
+provider errors or missing/invalid structured results return 502. Responses contain
+fixed messages, never raw provider exceptions. Each provider request has a
+30-second timeout and automatic retries are disabled to bound repeated paid calls.
+
+Credentials stay in the server environment. Only use fictional or redacted incident
+descriptions: accepted input is sent to the AI provider. A successful `/analyze`
+request can incur API charges. Keep this learning server bound to localhost; it
+has no authentication or rate limiting for public deployment.
+
+The endpoint only returns advisory text. It has no shell execution, infrastructure
+SDK calls, or model tools, and cannot execute remediation commands. Review all
+suggested actions before running anything yourself.
+
+### Practical AI engineering lessons
+
+- **Reuse:** separating analysis, persistence, and the CLI lets two interfaces use
+  the same logic while keeping imports free of interactive and network operations.
+- **Contracts:** request validation rejects bad input before paid work; the shared
+  response schema checks AI output instead of trusting generated text.
+- **Failure boundaries:** finite timeouts and sanitized HTTP errors make provider
+  failures understandable without leaking credentials or incident details.
+- **Testing:** mocked provider calls cover Windows, Linux, AWS, Kubernetes, and
+  networking inputs without paid requests. These verify application behavior,
+  not the accuracy of a real model's diagnosis. A temporary directory checks that
+  the CLI still saves the report format used by history and evaluations.
+- **Human control:** the application produces guidance only; diagnosis and any
+  infrastructure changes still require your review.
+
+Run the complete offline checks:
+
+```bash
+python run_tests.py
+python -m ruff check .
+```
+
+CI runs these tests on Python 3.9 and 3.11; source syntax and Ruff target Python 3.9.
