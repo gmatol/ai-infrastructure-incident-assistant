@@ -6,10 +6,11 @@ from fastapi import Depends, FastAPI, HTTPException
 from openai import APITimeoutError, OpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, Field
 
+from api_observability import add_request_logging
 from incident_service import IncidentAnalysis, analyze_incident
 
 app = FastAPI(title="AI Infrastructure Incident Assistant")
-
+add_request_logging(app)
 
 class IncidentRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
