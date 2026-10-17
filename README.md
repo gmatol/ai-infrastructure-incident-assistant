@@ -32,7 +32,7 @@ python -m pip install ruff==0.17.0
 
 The project has been exercised locally on Python 3.9. GitHub Actions runs the automated suite on Python 3.9 and 3.11. Ruff is pinned to 0.17.0 locally and in CI, and `ruff.toml` targets Python 3.9 so lint suggestions preserve compatibility (including `timezone.utc`). Dependency and model availability may require a newer Python version or an accessible model. The unit suite does not exercise live AI API calls.
 
-For AI analysis, configure your own OpenAI API key. API usage may incur charges. The analysis script currently specifies its model in `structured_incident_app.py`; use a model available to your account that supports structured responses.
+For AI analysis, configure your own OpenAI API key. API usage may incur charges. The analysis script currently specifies its model in `incident_service.py`; use a model available to your account that supports structured responses.
 
 Create a local `.env` in VS Code with this shell assignment, replacing the placeholder privately:
 
@@ -112,7 +112,7 @@ python run_tests.py
 ruff check .
 ```
 
-The suite has 24 tests:
+The suite has 40 tests:
 
 - Incident filtering and severity input validation.
 - Corrupted JSON handling and warning logging.
@@ -143,6 +143,46 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 | `requirements.txt` | Application dependencies |
 | `.github/workflows/python-tests.yml` | CI workflow |
 
+## Local REST API
+
+Start the server from the repository root with your virtual environment active:
+
+```bash
+source .env
+python -m uvicorn incident_api:app --host 127.0.0.1 --port 8000
+```
+
+Keep this terminal running while sending requests from another terminal.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Returns application health without calling OpenAI |
+| POST | `/incidents` | Validates and acknowledges an incident |
+| POST | `/incidents/analyze` | Returns structured AI troubleshooting guidance |
+
+Both POST endpoints accept JSON containing a `description`.
+Surrounding whitespace is removed, and descriptions must contain
+10 to 4,000 characters.
+
+The analysis response contains severity, summary, likely cause,
+troubleshooting steps, and recommended action. The API returns
+guidance without executing commands or saving an incident report.
+The command-line application still saves reports.
+
+### Analysis error responses
+
+- `422`: Incident input failed validation.
+- `503`: The OpenAI API key is missing or blank.
+- `504`: The OpenAI request timed out.
+- `502`: Another provider error occurred or structured analysis was missing.
+
+The analysis endpoint requires an OpenAI API key and incurs normal
+API usage. Automated tests use simulated clients and make no paid
+requests.
+
+Keep the server bound to localhost. This prototype does not yet
+provide authentication or rate limiting for public access.
+
 ## Safety and limitations
 
 - The assistant suggests guidance; it does not execute commands or connect to infrastructure.
@@ -170,4 +210,4 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 - `v1.0.0`: initial incident-assistant portfolio milestone.
 - Planned `v1.1.0`: human evaluations, safe reusable saving, six shared criteria, 18-test suite, and updated documentation.
 
-The next learning project is a separate Infrastructure Runbook Assistant focused on retrieving evidence from approved documents.
+Development continues in this repository through the established 12-week AI engineering plan.
