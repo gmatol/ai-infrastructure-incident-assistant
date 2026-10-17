@@ -1,8 +1,9 @@
+import os
 from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
-from openai import OpenAI, OpenAIError
+from openai import APITimeoutError, OpenAI, OpenAIError
 from pydantic import BaseModel, ConfigDict, Field
 
 from incident_service import IncidentAnalysis, analyze_incident
@@ -25,7 +26,19 @@ class IncidentResponse(BaseModel):
 
 
 def get_openai_client() -> Iterator[OpenAI]:
-    with OpenAI(timeout=30.0, max_retries=0) as client:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI service is not configured.",
+        )
+
+    with OpenAI(
+        api_key=api_key,
+        timeout=30.0,
+        max_retries=0,
+    ) as client:
         yield client
 
 
@@ -57,6 +70,11 @@ def analyze_incident_endpoint(
             incident.description,
             client,
         )
+    except APITimeoutError as error:
+        raise HTTPException(
+            status_code=504,
+            detail="Incident analysis timed out. Try again later.",
+        ) from error
     except (OpenAIError, RuntimeError) as error:
         raise HTTPException(
             status_code=502,
