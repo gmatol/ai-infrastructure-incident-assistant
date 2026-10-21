@@ -1,0 +1,9 @@
+# Deny by default, including .env files, Git history, virtual environments,
+# logs, incident_reports/, evaluations/, and any future local files.
+**
+!Dockerfile
+!.dockerignore
+!requirements.txt
+!incident_api.py
+!incident_service.py
+!api_observability.py
