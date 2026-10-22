@@ -83,6 +83,12 @@ class TestIncidentAPIAnalysis(unittest.TestCase):
                 ),
             },
         )
+        self.assertNotIn(
+            "AI did not return a structured analysis.",
+            response.text,
+        )
+        self.assertNotIn("RuntimeError", response.text)
+        self.fake_client.responses.parse.assert_called_once()
 
 
 if __name__ == "__main__":

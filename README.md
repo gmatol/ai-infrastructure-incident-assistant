@@ -116,7 +116,7 @@ python run_tests.py
 ruff check .
 ```
 
-The suite has 43 tests:
+The suite has 44 test methods (including five provider-error subtests within one method):
 
 - Incident filtering and severity input validation.
 - Corrupted JSON handling and warning logging.
@@ -195,6 +195,10 @@ requests.
 Keep the server bound to localhost. This prototype does not yet
 provide authentication or rate limiting for public access.
 
+### Local Docker demonstration
+
+For a non-root Python 3.11 container demonstration, see [DOCKER.md](DOCKER.md). It covers building the image, localhost-only publishing, runtime security settings, and endpoint checks without credentials or paid AI calls. This remains a local demonstration; public authentication and rate limiting are not implemented.
+
 ## Safety and limitations
 
 - The assistant suggests guidance; it does not execute commands or connect to infrastructure.
@@ -220,8 +224,8 @@ provide authentication or rate limiting for public access.
 ## Release milestones
 
 - `v1.0.0`: published GitHub release for the initial incident-assistant portfolio milestone.
-- `v1.1.0`: existing Git tag for the human-evaluation milestone, including safe reusable saving, six shared criteria, an 18-test suite at that milestone, and updated documentation. As of October 18, 2026, no GitHub release has been published for this tag; the published release list contains only `v1.0.0`.
-- Current `main`: development beyond `v1.1.0`, including the shared analysis service, local FastAPI endpoints, analysis error handling, request observability, and expanded automated tests. These features are implemented on `main`; they are not part of the earlier `v1.1.0` milestone.
+- `v1.1.0`: existing Git tag for the human-evaluation milestone, including safe reusable saving, six shared criteria, an 18-test suite at that milestone, and updated documentation. As of October 21, 2026, no GitHub release has been published for this tag; the published release list contains only `v1.0.0`.
+- Current `main`: development beyond `v1.1.0`, including the shared analysis service, local FastAPI endpoints, analysis error handling, request observability, expanded automated tests, and a local Docker demonstration. These features are implemented on `main`; they are not part of the earlier `v1.1.0` milestone.
 
 Public API authentication and rate limiting remain unimplemented. Public deployment and customer-infrastructure integration are outside the current prototype; remediation actions remain the administrator's responsibility.
 
