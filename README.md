@@ -2,7 +2,9 @@
 
 [![Python Tests](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml/badge.svg)](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/workflows/python-tests.yml)
 
-A Python command-line portfolio project for infrastructure incident investigation. It generates structured AI guidance, saves JSON incident reports, filters report history, and records human evaluations of response quality.
+A Python portfolio application for infrastructure incident investigation, with a command-line interface and a local FastAPI REST API. Both use a shared analysis service to generate structured AI troubleshooting guidance. The command-line workflow saves JSON incident reports, filters report history, and records human evaluations; the API returns analysis without saving reports.
+
+The API provides health, incident-validation, and incident-analysis endpoints, with input validation, error responses, request IDs, and request-duration logging. It is a local prototype that suggests guidance for administrator review; it does not connect to infrastructure or execute remediation commands.
 
 Built for learning workflows relevant to System Administrators, Cloud Engineers, DevOps Engineers, and SREs.
 
@@ -10,6 +12,8 @@ Built for learning workflows relevant to System Administrators, Cloud Engineers,
 
 - Analyze fictional Linux, Windows, AWS, Kubernetes, and networking incidents.
 - Validate AI response structure with Pydantic.
+- Request structured guidance through the CLI or local POST `/incidents/analyze` endpoint.
+- Return API validation and analysis errors, with request IDs and duration logging.
 - Save timestamped incident reports as JSON.
 - Filter history by Low, Medium, High, Critical, or All.
 - Log history operations and skip unreadable or corrupted JSON reports.
@@ -112,7 +116,7 @@ python run_tests.py
 ruff check .
 ```
 
-The suite has 40 tests:
+The suite has 44 test methods (including five provider-error subtests within one method):
 
 - Incident filtering and severity input validation.
 - Corrupted JSON handling and warning logging.
@@ -120,6 +124,8 @@ The suite has 40 tests:
 - Evaluation persistence, overwrite protection, and missing-report rejection.
 - Reviewer attribution and trimming, blank/non-text rejection, existing-record preservation, and CLI name handling.
 - Six unique criteria and a full-score total of 12.
+- API health, incident validation, structured analysis, and error responses using simulated clients.
+- Shared analysis-service behavior and API request-ID/duration logging.
 
 Tests use temporary data and mocked input. They do not require an API key or paid model calls. Passing tests verifies covered application behavior, not the correctness of generated diagnoses or complete coverage of the interactive CLI.
 
@@ -130,7 +136,10 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 | File | Purpose |
 |---|---|
 | `first_ai_app.py` | Basic AI analysis CLI |
-| `structured_incident_app.py` | Structured analysis and incident JSON storage |
+| `structured_incident_app.py` | CLI using the shared analysis service, with incident JSON storage |
+| `incident_api.py` | FastAPI endpoints, request/response validation, client configuration, and analysis error responses |
+| `incident_service.py` | Shared structured-analysis model and OpenAI analysis function used by the CLI and API |
+| `api_observability.py` | API middleware for request IDs and method/path/status/duration logging |
 | `incident_history.py` | Severity filtering, display, and logging |
 | `save_evaluation.py` | Human evaluation entry, validation, and safe saving |
 | `ai_evaluation_notes.md` | Written evaluation notes |
@@ -139,6 +148,9 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 | `test_evaluation.py` | Score validation tests |
 | `test_evaluation_saving.py` | Safe-saving tests |
 | `test_evaluation_criteria.py` | Shared criterion tests |
+| `test_incident_api*.py` | API health, validation, analysis, and error-response tests |
+| `test_incident_service.py` | Shared analysis-service tests |
+| `test_api_observability.py` | Request-ID correlation, timing, and logging tests |
 | `run_tests.py` | Automatic test discovery |
 | `requirements.txt` | Application dependencies |
 | `.github/workflows/python-tests.yml` | CI workflow |
@@ -183,6 +195,10 @@ requests.
 Keep the server bound to localhost. This prototype does not yet
 provide authentication or rate limiting for public access.
 
+### Local Docker demonstration
+
+For a non-root Python 3.11 container demonstration, see [DOCKER.md](DOCKER.md). It covers building the image, localhost-only publishing, runtime security settings, and endpoint checks without credentials or paid AI calls. This remains a local demonstration; public authentication and rate limiting are not implemented.
+
 ## Safety and limitations
 
 - The assistant suggests guidance; it does not execute commands or connect to infrastructure.
@@ -203,11 +219,14 @@ provide authentication or rate limiting for public access.
 
 ## Interview summary
 
-“I built a Python infrastructure incident assistant that generates structured troubleshooting guidance, saves JSON reports, and filters history. I added human evaluation records, validation, overwrite protection, isolated tests, and GitHub Actions. The application supports investigation; an administrator verifies evidence and performs approved actions.”
+“I built a Python infrastructure incident assistant with a command-line workflow and a local FastAPI API, backed by a shared structured-analysis service. The CLI saves JSON reports for history filtering and human evaluation; the API returns troubleshooting guidance with validation, error handling, request IDs, and duration logging. I added isolated tests and GitHub Actions. An administrator verifies the guidance and performs approved actions.”
 
 ## Release milestones
 
-- `v1.0.0`: initial incident-assistant portfolio milestone.
-- Planned `v1.1.0`: human evaluations, safe reusable saving, six shared criteria, 18-test suite, and updated documentation.
+- `v1.0.0`: published GitHub release for the initial incident-assistant portfolio milestone.
+- `v1.1.0`: existing Git tag for the human-evaluation milestone, including safe reusable saving, six shared criteria, an 18-test suite at that milestone, and updated documentation. As of October 21, 2026, no GitHub release has been published for this tag; the published release list contains only `v1.0.0`.
+- Current `main`: development beyond `v1.1.0`, including the shared analysis service, local FastAPI endpoints, analysis error handling, request observability, expanded automated tests, and a local Docker demonstration. These features are implemented on `main`; they are not part of the earlier `v1.1.0` milestone.
+
+Public API authentication and rate limiting remain unimplemented. Public deployment and customer-infrastructure integration are outside the current prototype; remediation actions remain the administrator's responsibility.
 
 Development continues in this repository through the established 12-week AI engineering plan.
