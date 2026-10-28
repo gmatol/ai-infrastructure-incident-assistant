@@ -1,0 +1,74 @@
+name: Container Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build API image
+        run: docker build --pull --tag ai-incident-assistant:ci .
+
+      - name: Start restricted local container
+        run: |
+          docker run --detach \
+            --name ai-incident-smoke \
+            --publish 127.0.0.1:8001:8000 \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            ai-incident-assistant:ci
+
+      - name: Wait for API startup
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent --max-time 2 --output /dev/null \
+              http://127.0.0.1:8001/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::API did not become available."
+          exit 1
+
+      - name: Verify running API with Python smoke checker
+        run: python container_smoke_check.py
+
+      - name: Verify stopped API returns exit code 1
+        run: |
+          docker stop ai-incident-smoke
+          set +e
+          python container_smoke_check.py
+          exit_code=$?
+          set -e
+          if [ "$exit_code" -ne 1 ]; then
+            echo "::error::Expected exit code 1, received $exit_code."
+            exit 1
+          fi
+          echo "PASS: stopped API was detected with exit code 1."
+
+      - name: Show container logs
+        if: always()
+        run: docker logs ai-incident-smoke || true
+
+      - name: Clean up container
+        if: always()
+        run: docker rm --force ai-incident-smoke || true
