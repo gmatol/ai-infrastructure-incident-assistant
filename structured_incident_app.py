@@ -52,6 +52,7 @@ def main() -> None:
                 timespec="seconds"
             ),
             "incident": incident,
+            "runbook_source": context["source"] if context is not None else None,
             "analysis": analysis.model_dump(),
         }
 

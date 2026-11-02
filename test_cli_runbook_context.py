@@ -45,9 +45,14 @@ class TestCLIRunbookContext(unittest.TestCase):
         reports = list(self.reports_folder.glob("incident_*.json"))
         self.assertEqual(len(reports), 1)
 
-        report = json.loads(reports[0].read_text(encoding="utf-8"))
-        self.assertEqual(report["incident"], description)
-        self.assertEqual(report["analysis"]["severity"], "Medium")
+        self.saved_report = json.loads(
+            reports[0].read_text(encoding="utf-8")
+        )
+        self.assertEqual(self.saved_report["incident"], description)
+        self.assertEqual(
+            self.saved_report["analysis"]["severity"],
+            "Medium",
+        )
 
         arguments = self.client.responses.parse.call_args.kwargs
         return arguments["input"][1]["content"]
@@ -66,6 +71,10 @@ class TestCLIRunbookContext(unittest.TestCase):
             "Check Active Directory LDAP SRV record resolution.",
             content["reference_runbook"]["text"],
         )
+        self.assertEqual(
+            self.saved_report["runbook_source"],
+            "runbooks/windows_dns.md",
+        )
 
     def test_no_match_sends_description_only(self) -> None:
         description = "Linux server disk is full."
@@ -73,6 +82,7 @@ class TestCLIRunbookContext(unittest.TestCase):
         content = self.run_cli(description)
 
         self.assertEqual(content, description)
+        self.assertIsNone(self.saved_report["runbook_source"])
 
 
 if __name__ == "__main__":
