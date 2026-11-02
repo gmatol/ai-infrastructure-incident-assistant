@@ -5,6 +5,7 @@ from pathlib import Path
 from openai import OpenAI, OpenAIError
 
 from incident_service import analyze_incident
+from runbook_context import get_runbook_context
 
 
 def main() -> None:
@@ -18,8 +19,14 @@ def main() -> None:
         )
 
     try:
+        context = get_runbook_context(incident)
+
         client = OpenAI()
-        analysis = analyze_incident(incident, client)
+        analysis = analyze_incident(
+            incident,
+            client,
+            runbook_context=context,
+        )
 
         print("\nSTRUCTURED INCIDENT ANALYSIS")
         print("-" * 40)
@@ -74,7 +81,7 @@ def main() -> None:
         print("Analysis failed:", error)
 
     except OSError as error:
-        print("Could not save the incident report:", error)
+        print("Could not read a runbook or save the incident report:", error)
 
 
 if __name__ == "__main__":
