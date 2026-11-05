@@ -83,29 +83,22 @@ def find_incidents_by_severity(
 
 
 def display_incidents(reports: list) -> None:
-    for number, report in enumerate(
-        reports,
-        start=1
-    ):
+    for number, report in enumerate(reports, start=1):
         analysis = report.get("analysis", {})
 
+        if "runbook_source" not in report:
+            source_label = "Not recorded"
+        elif report["runbook_source"] is None:
+            source_label = "No matching runbook supplied"
+        else:
+            source_label = report["runbook_source"]
+
         print(f"\nReport {number}")
-        print(
-            "File:",
-            report.get("file_name", "Unknown")
-        )
-        print(
-            "Generated:",
-            report.get("generated_at", "Unknown")
-        )
-        print(
-            "Severity:",
-            analysis.get("severity", "Unknown")
-        )
-        print(
-            "Summary:",
-            analysis.get("summary", "Not available")
-        )
+        print("File:", report.get("file_name", "Unknown"))
+        print("Generated:", report.get("generated_at", "Unknown"))
+        print("Runbook source:", source_label)
+        print("Severity:", analysis.get("severity", "Unknown"))
+        print("Summary:", analysis.get("summary", "Not available"))
 
 
 def main() -> None:
