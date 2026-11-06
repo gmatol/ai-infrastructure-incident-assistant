@@ -14,8 +14,9 @@ Built for learning workflows relevant to System Administrators, Cloud Engineers,
 - Validate AI response structure with Pydantic.
 - Request structured guidance through the CLI or local POST `/incidents/analyze` endpoint.
 - Return API validation and analysis errors, with request IDs and duration logging.
-- Save timestamped incident reports as JSON.
-- Filter history by Low, Medium, High, Critical, or All.
+- Automatically retrieve a local reference runbook for matching CLI incidents and supply its source and text to analysis.
+- Save timestamped CLI incident reports as JSON, including the supplied `runbook_source` or JSON `null` when no runbook matches.
+- Filter history by Low, Medium, High, Critical, or All, and display each report's recorded runbook source status.
 - Log history operations and skip unreadable or corrupted JSON reports.
 - Record human evaluation scores linked to incident report filenames.
 - Reject invalid scores and preserve existing evaluation files.
@@ -70,13 +71,31 @@ One payroll administrator receives Access Denied on a Windows Server payroll sha
 
 The response includes severity, summary, likely cause, troubleshooting steps, and recommended action. A report is saved to `incident_reports/incident_<timestamp>.json`. Responses vary; no particular diagnosis or score is guaranteed.
 
+### Automatic CLI runbook guidance
+
+Before requesting analysis, the CLI performs case-insensitive keyword matching against `runbooks/index.json` and loads the first matching runbook. This is a small local keyword lookup, not semantic search. The current index contains one reference: [Windows Active Directory DNS checks](runbooks/windows_dns.md), matched by DNS, SRV, domain controller, or Active Directory terminology.
+
+For a match, the CLI supplies the incident description, runbook source, and runbook text to the shared analysis service. With no match, it supplies only the incident description. New saved reports record `"runbook_source": "runbooks/windows_dns.md"` for that reference, or `"runbook_source": null` when no runbook matched.
+
+The source field records which reference was supplied. It does not prove that the AI followed the guidance, completed any checks, or correctly diagnosed the incident. The service instructs the model to distinguish runbook guidance from verified incident facts; administrators still review the answer against evidence. The saved path is not a snapshot or version of the runbook text.
+
+Runbook text is sent to the configured AI provider when supplied for analysis. Use reviewed, non-confidential local runbooks and metadata. Retrieval currently trusts the index filenames and does not enforce path containment; do not use untrusted indexes or runbook files.
+
 ## Search incident history
 
 ```bash
 python incident_history.py
 ```
 
-Enter `High`, another allowed severity, or `All`. The program displays matching reports and their count. Run from the repository root because incident generation and history use relative report paths.
+Enter `High`, another allowed severity, or `All`. The program displays matching reports, their severity and summary, their recorded runbook source status, and the matching count. Run from the repository root because incident generation and history use relative report paths.
+
+| Saved report metadata | History displays after `Runbook source:` |
+|---|---|
+| `runbook_source` contains a path | The recorded path, such as `runbooks/windows_dns.md` |
+| `runbook_source` is JSON `null` | `No matching runbook supplied` |
+| `runbook_source` is absent in an older report | `Not recorded` |
+
+History reads the saved metadata; it does not retrieve a runbook again or rewrite older reports. `Not recorded` means the source is unknown, rather than evidence that no runbook was supplied.
 
 ## Save a human evaluation
 
@@ -120,7 +139,9 @@ python run_tests.py
 ruff check .
 ```
 
-The suite has 44 test methods (including five provider-error subtests within one method):
+The suite has **51 test methods** (subtests are not counted as separate methods). This count was checked against `main` at `1a71a31dee897ead83907b3b3443110ccc681940`, through merged [PR #25](https://github.com/gmatol/ai-infrastructure-incident-assistant/pull/25). The PR records all 51 tests and Ruff passing on my Mac. The [Python Tests workflow on that main commit](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/runs/42062375832) also passed with the Python 3.9/3.11 matrix.
+
+Coverage includes:
 
 - Incident filtering and severity input validation.
 - Corrupted JSON handling and warning logging.
@@ -130,6 +151,11 @@ The suite has 44 test methods (including five provider-error subtests within one
 - Six unique criteria and a full-score total of 12.
 - API health, incident validation, structured analysis, and error responses using simulated clients.
 - Shared analysis-service behavior and API request-ID/duration logging.
+- Runbook source/text reaching the simulated analysis client, and description-only input for no match.
+- Automatic CLI retrieval and saved source-path/null metadata using temporary reports.
+- All three history source statuses, while preserving severity and summary display.
+
+Run these commands from the repository root with the virtual environment active. `run_tests.py` discovers `test_*.py` files automatically, including the runbook and history tests. Five provider-error cases run as subtests within one method.
 
 Tests use temporary data and mocked input. They do not require an API key or paid model calls. Passing tests verifies covered application behavior, not the correctness of generated diagnoses or complete coverage of the interactive CLI.
 
@@ -140,14 +166,21 @@ GitHub Actions runs Ruff and the test suite on pull requests and pushes to main.
 | File | Purpose |
 |---|---|
 | `first_ai_app.py` | Basic AI analysis CLI |
-| `structured_incident_app.py` | CLI using the shared analysis service, with incident JSON storage |
+| `structured_incident_app.py` | Automatic CLI runbook retrieval, shared analysis, and JSON reports with source metadata |
 | `incident_api.py` | FastAPI endpoints, request/response validation, client configuration, and analysis error responses |
-| `incident_service.py` | Shared structured-analysis model and OpenAI analysis function used by the CLI and API |
+| `incident_service.py` | Shared structured-analysis model and OpenAI function, with optional runbook context |
 | `api_observability.py` | API middleware for request IDs and method/path/status/duration logging |
-| `incident_history.py` | Severity filtering, display, and logging |
+| `incident_history.py` | Severity filtering, three runbook-source display statuses, and logging |
+| `runbook_retrieval.py` | Case-insensitive keyword lookup using the local runbook index |
+| `runbook_context.py` | Loads matching runbook text and its source reference, or returns no match |
+| `runbooks/index.json` | Keyword-to-runbook metadata |
+| `runbooks/windows_dns.md` | Windows Active Directory DNS investigation guidance |
 | `save_evaluation.py` | Human evaluation entry, validation, and safe saving |
 | `ai_evaluation_notes.md` | Written evaluation notes |
 | `test_incident_history.py` | History and input tests |
+| `test_history_runbook_source.py` | Recorded-path, null, and missing-source history display tests |
+| `test_runbook_analysis_context.py` | Supplied source/text and no-match analysis-input tests |
+| `test_cli_runbook_context.py` | Automatic CLI retrieval, analysis input, and saved source metadata tests |
 | `test_corrupted_report.py` | Corrupted-report test |
 | `test_evaluation.py` | Score validation tests |
 | `test_evaluation_saving.py` | Safe-saving tests |
@@ -185,6 +218,8 @@ troubleshooting steps, and recommended action. The API returns
 guidance without executing commands or saving an incident report.
 The command-line application still saves reports.
 
+Automatic runbook retrieval, saved `runbook_source` metadata, and incident-history source display are CLI features. The current API calls the shared service without runbook context; it does not expose report history or source metadata. Mocked API tests verify covered response behavior, not live provider availability or diagnosis quality.
+
 ### Analysis error responses
 
 - `422`: Incident input failed validation.
@@ -201,7 +236,7 @@ provide authentication or rate limiting for public access.
 
 ### Local Docker demonstration
 
-For a non-root Python 3.11 container demonstration, see [DOCKER.md](DOCKER.md). It covers building the image, localhost-only publishing, runtime security settings, and endpoint checks without credentials or paid AI calls. This remains a local demonstration; public authentication and rate limiting are not implemented.
+For a non-root Python 3.11 container demonstration, see [DOCKER.md](DOCKER.md). It covers building the image, localhost-only publishing, runtime security settings, and endpoint checks without credentials or paid AI calls. The image packages only the API modules; it excludes the CLI, runbook loaders, runbooks, reports, and tests. It does not provide the CLI runbook/history workflow. The [container smoke workflow on current main](https://github.com/gmatol/ai-infrastructure-incident-assistant/actions/runs/42062375618) passed image startup, health/request-ID, and stopped-container failure checks without credentials. Those checks do not verify live `/incidents/analyze` requests or runbook-assisted analysis in Docker. This remains a local demonstration; public authentication and rate limiting are not implemented.
 
 ## Safety and limitations
 
@@ -217,19 +252,19 @@ For a non-root Python 3.11 container demonstration, see [DOCKER.md](DOCKER.md). 
 
 1. Introduce the infrastructure investigation problem.
 2. Generate one structured response using a fictional one-line incident.
-3. Show its saved report and retrieve it with the history filter.
+3. Show its saved `runbook_source` metadata and retrieve it with the history filter. Explain recorded-path, no-match, and older-report statuses without treating the source as diagnosis verification.
 4. Explain an evaluation, including its limitations and improvement note.
 5. Show the test and Ruff results. Keep keys and private data off-screen.
 
 ## Interview summary
 
-“I built a Python infrastructure incident assistant with a command-line workflow and a local FastAPI API, backed by a shared structured-analysis service. The CLI saves JSON reports for history filtering and human evaluation; the API returns troubleshooting guidance with validation, error handling, request IDs, and duration logging. I added isolated tests and GitHub Actions. An administrator verifies the guidance and performs approved actions.”
+“I built a Python infrastructure incident assistant with a command-line workflow and a local FastAPI API, backed by a shared structured-analysis service. The CLI saves JSON reports for history filtering and human evaluation; the API returns troubleshooting guidance with validation, error handling, request IDs, and duration logging. I added automatic local runbook retrieval to the CLI, recorded the supplied source in reports, and displayed that metadata in history. I added 51 isolated automated tests and GitHub Actions. Source tracking shows what guidance was supplied, not whether the diagnosis is correct. An administrator verifies the guidance and performs approved actions.”
 
 ## Release milestones
 
 - `v1.0.0`: published GitHub release for the initial incident-assistant portfolio milestone.
 - `v1.1.0`: existing Git tag for the human-evaluation milestone, including safe reusable saving, six shared criteria, an 18-test suite at that milestone, and updated documentation. As of October 21, 2026, no GitHub release has been published for this tag; the published release list contains only `v1.0.0`.
-- Current `main`: development beyond `v1.1.0`, including the shared analysis service, local FastAPI endpoints, analysis error handling, request observability, expanded automated tests, and a local Docker demonstration. These features are implemented on `main`; they are not part of the earlier `v1.1.0` milestone.
+- Current `main`: development beyond `v1.1.0`, including the shared analysis service, local FastAPI endpoints, analysis error handling, request observability, automatic CLI runbook retrieval, report-source tracking, history source display, 51 automated test methods, and a local Docker demonstration. These features are implemented on `main`; they are not part of the earlier `v1.1.0` milestone.
 
 Public API authentication and rate limiting remain unimplemented. Public deployment and customer-infrastructure integration are outside the current prototype; remediation actions remain the administrator's responsibility.
 
