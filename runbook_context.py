@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from runbook_retrieval import RUNBOOKS_FOLDER, find_runbook
+from runbook_retrieval import find_runbook, resolve_runbook_path
 
 
 def get_runbook_context(description: str) -> dict[str, str] | None:
@@ -9,7 +9,7 @@ def get_runbook_context(description: str) -> dict[str, str] | None:
     if not filename:
         return None
 
-    runbook_path = RUNBOOKS_FOLDER / filename
+    runbook_path = resolve_runbook_path(filename)
 
     return {
         "source": f"runbooks/{filename}",
