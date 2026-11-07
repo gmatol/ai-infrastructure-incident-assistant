@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from api_observability import add_request_logging
 from incident_service import IncidentAnalysis, analyze_incident
+from runbook_context import get_runbook_context
 
 app = FastAPI(title="AI Infrastructure Incident Assistant")
 add_request_logging(app)
@@ -67,9 +68,18 @@ def analyze_incident_endpoint(
     client: Annotated[OpenAI, Depends(get_openai_client)],
 ) -> IncidentAnalysis:
     try:
+        context = get_runbook_context(incident.description)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise HTTPException(
+            status_code=500,
+            detail="Runbook retrieval is unavailable.",
+        ) from error
+
+    try:
         return analyze_incident(
             incident.description,
             client,
+            runbook_context=context,
         )
     except APITimeoutError as error:
         raise HTTPException(

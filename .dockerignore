@@ -7,3 +7,9 @@
 !incident_api.py
 !incident_service.py
 !api_observability.py
+!runbook_context.py
+!runbook_retrieval.py
+!runbooks/
+runbooks/**
+!runbooks/index.json
+!runbooks/windows_dns.md
