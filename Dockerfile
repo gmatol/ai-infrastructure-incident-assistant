@@ -13,7 +13,8 @@ COPY requirements.txt ./
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
 # Copy only the modules needed by the API; no credentials or incident data.
-COPY incident_api.py incident_service.py api_observability.py ./
+COPY incident_api.py incident_service.py api_observability.py runbook_context.py runbook_retrieval.py ./
+COPY runbooks/index.json runbooks/windows_dns.md ./runbooks/
 
 USER 10001:10001
 
