@@ -65,6 +65,18 @@ jobs:
           fi
           echo "PASS: stopped API was detected with exit code 1."
 
+      - name: Verify bundled DNS runbook in API image
+        run: |
+          docker run --rm --interactive \
+            --network none \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            ai-incident-assistant:ci \
+            python - TestAPIRunbookContext.test_dns_runbook_reaches_analysis \
+            < test_api_runbook_context.py
+
       - name: Show container logs
         if: always()
         run: docker logs ai-incident-smoke || true
