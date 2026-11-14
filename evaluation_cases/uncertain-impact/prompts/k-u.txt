@@ -1,0 +1,1 @@
+In Kubernetes, three pods in a new deployment revision fail readiness checks. Three pods from the earlier revision are Ready. Service routing and client request success have yet to be checked.

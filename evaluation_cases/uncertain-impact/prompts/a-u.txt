@@ -1,0 +1,1 @@
+An internet-facing AWS Application Load Balancer in one production region shows 503 responses and zero healthy targets in its checkout target group shortly after a deployment. This is a monitoring alert. Failed customer transactions, affected clients, and failover status have yet to be checked.
