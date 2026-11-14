@@ -1,0 +1,1 @@
+At 08:35, a Windows member server's configured resolver returns NXDOMAIN for the Active Directory LDAP SRV record. A management shell is still reachable. The help desk has one server alert. Login tests and application availability have yet to be checked.

@@ -1,0 +1,1 @@
+A Linux host reports /var at 100% and the application journal shows writes failing with ENOSPC. The service owner confirms only the internal QA build dashboard is affected. Three QA engineers cannot upload test artifacts. Production is healthy and a spare QA runner provides a workaround.

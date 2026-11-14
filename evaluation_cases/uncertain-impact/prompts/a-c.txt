@@ -1,0 +1,1 @@
+An internet-facing AWS Application Load Balancer in one production region shows 503 responses and zero healthy targets in its checkout target group shortly after a deployment. Production monitoring and support confirm all customers are unable to complete checkout in the only serving region. Checkout has been unavailable for 20 minutes. There is no alternate checkout path.

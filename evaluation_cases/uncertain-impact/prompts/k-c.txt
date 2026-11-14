@@ -1,0 +1,1 @@
+In Kubernetes, three pods in a new deployment revision fail readiness checks. Three pods from the earlier revision are Ready. The production invoice export API is returning 503s for all requests from the billing team. Payment collection and other applications are healthy. A manual export workaround is available, but the billing cutoff is in 45 minutes.

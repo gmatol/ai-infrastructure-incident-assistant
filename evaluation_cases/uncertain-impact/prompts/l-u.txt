@@ -1,0 +1,1 @@
+A Linux host reports /var at 100% and the application journal shows writes failing with ENOSPC. The alert came from one host. User-facing requests and dependent applications have yet to be checked.

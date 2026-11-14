@@ -1,0 +1,1 @@
+At 08:35, a Windows member server's configured resolver returns NXDOMAIN for the Active Directory LDAP SRV record. A management shell is still reachable. The help desk confirms 45 of 120 warehouse staff cannot sign in to the production shipping application at one site. Other sites are healthy. Manual processing is available and shipments are delayed.
