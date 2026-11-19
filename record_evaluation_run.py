@@ -5,10 +5,12 @@ import hashlib
 import json
 import subprocess
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+import incident_service
 from incident_service import IncidentAnalysis, analyze_incident
 from runbook_context import get_runbook_context
 
@@ -28,9 +30,18 @@ def git_output(*arguments: str) -> str:
     ).strip()
 
 
-def build_record(case: str) -> dict:
+def build_record(
+    case: str,
+    *,
+    extra_instructions: str | None = None,
+) -> dict:
     if case not in CASES:
         raise ValueError(f"Unknown evaluation case: {case}")
+
+    if extra_instructions is not None:
+        extra_instructions = extra_instructions.strip()
+        if not extra_instructions:
+            raise ValueError("Extra instructions cannot be blank.")
 
     prompt_path = (
         PROJECT / "evaluation_cases/uncertain-impact/prompts" / f"{case}.txt"
@@ -47,7 +58,19 @@ def build_record(case: str) -> dict:
         recommended_action="Review the captured request.",
     )
 
-    analyze_incident(prompt, client, runbook_context=context)
+    original_instructions = incident_service.INSTRUCTIONS
+    instruction_scope = (
+        patch.object(
+            incident_service,
+            "INSTRUCTIONS",
+            original_instructions + "\n\n" + extra_instructions,
+        )
+        if extra_instructions is not None
+        else nullcontext()
+    )
+
+    with instruction_scope:
+        analyze_incident(prompt, client, runbook_context=context)
     client.responses.parse.assert_called_once()
     arguments = client.responses.parse.call_args.kwargs
 
@@ -71,7 +94,16 @@ def build_record(case: str) -> dict:
         "application_sha": git_output("rev-parse", "HEAD"),
         "working_tree_dirty": bool(git_output("status", "--porcelain")),
         "entry_point": "incident_service.analyze_incident",
-        "instruction_variant": "application_default",
+        "instruction_variant": (
+            "candidate"
+            if extra_instructions is not None
+            else "application_default"
+        ),
+        "extra_instructions_sha256": (
+            sha256(extra_instructions)
+            if extra_instructions is not None
+            else None
+        ),
         "incident": prompt,
         "incident_sha256": sha256(prompt),
         "instructions_sha256": sha256(arguments["input"][0]["content"]),
@@ -96,9 +128,22 @@ def main() -> None:
         type=Path,
         default=Path.home() / "AI-Learning/evaluation-notes",
     )
+    parser.add_argument(
+        "--extra-instructions",
+        type=Path,
+        help="Append instructions from a UTF-8 file for simulated capture.",
+    )
     args = parser.parse_args()
 
-    record = build_record(args.case)
+    extra = (
+        args.extra_instructions.expanduser().read_text(encoding="utf-8")
+        if args.extra_instructions is not None
+        else None
+    )
+    record = build_record(
+        args.case,
+        extra_instructions=extra,
+    )
     output_dir = args.output_dir.expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
     folder = Path(tempfile.mkdtemp(
@@ -113,6 +158,7 @@ def main() -> None:
 
     print("Case:", record["case"])
     print("Mode:", record["mode"])
+    print("Instruction variant:", record["instruction_variant"])
     context = record["runbook_context"]
     print("Runbook:", context["source"] if context else "no match")
     print("Live API requests:", record["live_api_requests"])
