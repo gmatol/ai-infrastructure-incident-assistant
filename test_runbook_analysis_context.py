@@ -18,6 +18,27 @@ class TestRunbookAnalysisContext(unittest.TestCase):
         )
         self.client.responses.parse.return_value.output_parsed = self.analysis
 
+    def assert_impact_rule_is_sent(self, arguments: dict) -> None:
+        messages = arguments["input"]
+
+        self.assertEqual(
+            [message["role"] for message in messages],
+            ["system", "user"],
+        )
+
+        system_text = " ".join(messages[0]["content"].split())
+
+        self.assertIn("If impact is unknown", system_text)
+        self.assertIn(
+            "ask directly which users and which applications are affected",
+            system_text,
+        )
+        self.assertIn(
+            "label any severity rating provisional until impact is confirmed",
+            system_text,
+        )
+        self.assertIs(arguments["text_format"], IncidentAnalysis)
+
     def test_dns_source_and_text_reach_client(self) -> None:
         description = "Windows server cannot resolve Active Directory DNS."
         context = get_runbook_context(description)
@@ -31,6 +52,7 @@ class TestRunbookAnalysisContext(unittest.TestCase):
 
         self.client.responses.parse.assert_called_once()
         arguments = self.client.responses.parse.call_args.kwargs
+        self.assert_impact_rule_is_sent(arguments)
         sent_content = json.loads(arguments["input"][1]["content"])
 
         self.assertEqual(
@@ -60,6 +82,7 @@ class TestRunbookAnalysisContext(unittest.TestCase):
 
         self.client.responses.parse.assert_called_once()
         arguments = self.client.responses.parse.call_args.kwargs
+        self.assert_impact_rule_is_sent(arguments)
         self.assertEqual(arguments["input"][1]["content"], description)
 
 
