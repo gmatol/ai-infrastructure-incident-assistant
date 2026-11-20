@@ -25,3 +25,78 @@ On main at [156d964](https://github.com/gmatol/ai-infrastructure-incident-assist
 | --- | --- | --- | --- | --- | --- | --- |
 | Pre-PR #30 | | | | | | |
 | PR #30 | | | | | | |
+
+## Offline paired request capture
+
+I use `run_offline_pairs.py` to capture and compare requests for all
+eight fictional Windows, Linux, AWS, and Kubernetes cases without
+calling a model.
+
+Each pair compares the current application instructions
+(`application_default`) with those same instructions plus text from
+a local candidate file (`candidate`). The current default already
+includes the unknown-impact rule.
+
+### Run from the repository root
+
+Activate my existing virtual environment:
+
+```bash
+source ~/AI-Learning/python/.venv/bin/activate
+```
+
+Provide the candidate instruction file:
+
+```bash
+python run_offline_pairs.py \
+  --extra-instructions "$HOME/AI-Learning/evaluation-notes/diagnostic-instruction-v2.txt"
+```
+
+This instruction file is local and must exist before running the command.
+The runner appends its stripped text to the system instruction.
+
+A successful batch reports:
+
+```text
+Mode: simulated
+Attempts: 16
+Captured: 16
+Failed: 0
+Matched pairs: 8
+Mismatched pairs: 0
+Not compared: 0
+Candidate instruction consistent: True
+Live API requests: 0
+```
+
+The `Saved:` line identifies a unique `offline-pairs-.../batch.json`
+under `~/AI-Learning/evaluation-notes/`. The file contains the attempt
+records, captured requests, hashes, and comparison results.
+
+### Interpret comparison results
+
+| Status | Meaning |
+| --- | --- |
+| `matched` | Both captures succeeded; the requests differ only in the appended system instruction, whose hash matches the candidate record. |
+| `mismatch` | Both captures succeeded, but the instruction or request comparison failed. |
+| `not_compared` | At least one capture failed; the pair was not compared. |
+
+The batch retains failed-attempt records and includes them in its counts.
+An expected capture failure records its stage and error category without
+saving the exception message.
+
+After saving the batch, the command exits with code 1 if any attempt
+failed, any pair mismatched or was not compared, or the captured candidate
+instruction hashes were inconsistent. A successful batch exits with code 0.
+Output-directory or file-write errors can prevent the batch from being saved.
+
+### What this evidence establishes
+
+These records describe application-level request construction with a
+simulated client. A matched pair checks the captured model name, incident
+payload, response format, and appended instruction.
+
+No model responses are generated: `analysis` remains null and live API
+requests remain zero. These results do not measure diagnostic quality,
+model repeatability, or infrastructure recovery. The candidate instruction
+remains experimental.
