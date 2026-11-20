@@ -118,6 +118,63 @@ def build_record(
     }
 
 
+def capture_attempt(
+    case: str,
+    *,
+    extra_instructions_path: Path | None = None,
+) -> dict:
+    extra = None
+    stage = "instruction_read"
+
+    try:
+        if extra_instructions_path is not None:
+            extra = extra_instructions_path.expanduser().read_text(
+                encoding="utf-8"
+            )
+
+        stage = "request_capture"
+        return build_record(case, extra_instructions=extra)
+
+    except (
+        OSError,
+        ValueError,
+        RuntimeError,
+        AssertionError,
+        subprocess.SubprocessError,
+    ) as error:
+        commit = None
+        dirty = None
+        try:
+            commit = git_output("rev-parse", "HEAD")
+            dirty = bool(git_output("status", "--porcelain"))
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+        return {
+            "case": case.upper(),
+            "mode": "simulated",
+            "outcome": "failed",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "application_sha": commit,
+            "working_tree_dirty": dirty,
+            "entry_point": "incident_service.analyze_incident",
+            "instruction_variant": (
+                "candidate"
+                if extra_instructions_path is not None
+                else "application_default"
+            ),
+            "extra_instructions_sha256": (
+                sha256(extra.strip()) if extra is not None else None
+            ),
+            "failure_stage": stage,
+            "error_category": type(error).__name__,
+            "request": None,
+            "request_sha256": None,
+            "live_api_requests": 0,
+            "analysis": None,
+        }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Capture an evaluation request without calling a model."
@@ -135,21 +192,19 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    extra = (
-        args.extra_instructions.expanduser().read_text(encoding="utf-8")
-        if args.extra_instructions is not None
-        else None
-    )
-    record = build_record(
+    record = capture_attempt(
         args.case,
-        extra_instructions=extra,
+        extra_instructions_path=args.extra_instructions,
     )
+
     output_dir = args.output_dir.expanduser()
     output_dir.mkdir(parents=True, exist_ok=True)
-    folder = Path(tempfile.mkdtemp(
-        prefix=f"{args.case}-simulated-",
-        dir=output_dir,
-    ))
+    folder = Path(
+        tempfile.mkdtemp(
+            prefix=f"{args.case}-simulated-",
+            dir=output_dir,
+        )
+    )
     output = folder / "record.json"
 
     with output.open("x", encoding="utf-8") as handle:
@@ -159,10 +214,20 @@ def main() -> None:
     print("Case:", record["case"])
     print("Mode:", record["mode"])
     print("Instruction variant:", record["instruction_variant"])
-    context = record["runbook_context"]
-    print("Runbook:", context["source"] if context else "no match")
+    print("Outcome:", record["outcome"])
+
+    if record["outcome"] == "failed":
+        print("Failure stage:", record["failure_stage"])
+        print("Error category:", record["error_category"])
+    else:
+        context = record["runbook_context"]
+        print("Runbook:", context["source"] if context else "no match")
+
     print("Live API requests:", record["live_api_requests"])
     print("Saved:", output)
+
+    if record["outcome"] == "failed":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -1,11 +1,13 @@
 import hashlib
 import json
+import tempfile
 import unittest
 from copy import deepcopy
+from pathlib import Path
 from unittest.mock import patch
 
 import incident_service
-from record_evaluation_run import build_record
+from record_evaluation_run import build_record, main
 
 
 class TestEvaluationRunRecorder(unittest.TestCase):
@@ -150,6 +152,84 @@ class TestEvaluationRunRecorder(unittest.TestCase):
             )
 
         self.assertEqual(incident_service.INSTRUCTIONS, original)
+
+
+    def test_cli_records_capture_failure_and_restores_default(self) -> None:
+        original = incident_service.INSTRUCTIONS
+        private_detail = "private test detail"
+
+        def fail_capture(*args, **kwargs):
+            self.assertEqual(
+                incident_service.INSTRUCTIONS,
+                original + "\n\n" + private_detail,
+            )
+            raise RuntimeError(private_detail)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / "candidate.txt"
+            candidate.write_text(private_detail, encoding="utf-8")
+            argv = [
+                "recorder", "k-u", "--output-dir", directory,
+                "--extra-instructions", str(candidate),
+            ]
+            with (
+                patch("sys.argv", argv),
+                patch("builtins.print") as output,
+                patch(
+                    "record_evaluation_run.analyze_incident",
+                    side_effect=fail_capture,
+                ),
+                patch(
+                    "record_evaluation_run.git_output",
+                    side_effect=["a" * 40, ""],
+                ),
+                self.assertRaises(SystemExit) as exited,
+            ):
+                main()
+
+            self.assertEqual(exited.exception.code, 1)
+            (record_path,) = root.glob("k-u-simulated-*/record.json")
+            raw = record_path.read_text(encoding="utf-8")
+            record = json.loads(raw)
+            self.assertNotIn(private_detail, raw)
+            self.assertNotIn(private_detail, str(output.mock_calls))
+            self.assertNotIn(str(candidate), raw)
+            self.assertNotIn("incident", record)
+            self.assertEqual(record["outcome"], "failed")
+            self.assertEqual(record["failure_stage"], "request_capture")
+            self.assertEqual(record["error_category"], "RuntimeError")
+            self.assertEqual(record["instruction_variant"], "candidate")
+            self.assertEqual(record["live_api_requests"], 0)
+            self.assertIsNone(record["request"])
+            self.assertIsNone(record["analysis"])
+
+        self.assertEqual(incident_service.INSTRUCTIONS, original)
+        restored = self.make_record("k-u")
+        self.assertEqual(restored["request"]["input"][0]["content"], original)
+
+    def test_cli_preserves_successful_simulated_capture(self) -> None:
+        baseline = self.make_record("k-u")
+        with tempfile.TemporaryDirectory() as directory:
+            argv = ["recorder", "k-u", "--output-dir", directory]
+            with (
+                patch("sys.argv", argv),
+                patch("builtins.print"),
+                patch(
+                    "record_evaluation_run.git_output",
+                    side_effect=["a" * 40, ""],
+                ),
+            ):
+                main()
+
+            (record_path,) = Path(directory).glob("k-u-simulated-*/record.json")
+            record = json.loads(record_path.read_text(encoding="utf-8"))
+            self.assertEqual(record["outcome"], "request_captured")
+            self.assertEqual(record["request"], baseline["request"])
+            self.assertEqual(record["request_sha256"], baseline["request_sha256"])
+            self.assertEqual(record["live_api_requests"], 0)
+            self.assertIsNone(record["analysis"])
+
 
 if __name__ == "__main__":
     unittest.main()
